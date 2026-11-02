@@ -1,20 +1,42 @@
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { AppNavigator } from './src/navigation';
+import { notificationService } from './src/services/notifications';
+import { backgroundTaskService } from './src/services/backgroundTasks';
+import * as Location from 'expo-location';
 
 export default function App() {
+  useEffect(() => {
+    const initializeServices = async () => {
+      try {
+        // 1. Register Notifications and setup notification channel
+        await notificationService.registerNotifications();
+
+        // 2. Request Location permissions and register background tracking
+        const foregroundStatus = await Location.requestForegroundPermissionsAsync();
+        if (foregroundStatus.status === 'granted') {
+          try {
+            const backgroundStatus = await Location.requestBackgroundPermissionsAsync();
+            if (backgroundStatus.status === 'granted') {
+              await backgroundTaskService.registerBackgroundTask();
+            }
+          } catch (bgErr) {
+            console.log('Background location permission optional or deferred:', bgErr);
+          }
+        }
+      } catch (error) {
+        console.error('Error during app service initialization:', error);
+      }
+    };
+
+    initializeServices();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <StatusBar style="light" />
+      <AppNavigator />
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
